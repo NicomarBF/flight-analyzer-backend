@@ -1,0 +1,11 @@
+{
+    "env": {
+      "browser": true,
+      "node": true
+    },
+    "extends": "eslint:recommended",
+    "rules": {
+      "no-console": "warn",
+      "semi": ["error", "always"]
+    }
+  }
