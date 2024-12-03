@@ -62,91 +62,108 @@ const getLatLonByICAO = (icaoCode) => {
 }
 
 app.get('/api/analysis', async (req, res) => {
-    const originData = getLatLonByICAO(req.query.origin);
-    const destinationData = getLatLonByICAO(req.query.destination);
-    const dt = moment(req.query.datetime, 'DD/MM/YYYY HH:mm:ss').unix();
-    const [weatherDataOrigin, weatherDataDestination] = await Promise.all([
-        getWeatherData(originData.latitude, originData.longitude, dt, API_KEY),
-        getWeatherData(destinationData.latitude, destinationData.longitude, dt, API_KEY),
-    ]);
-    const dateDatails = getDateDetails(dt);
-    const estimedFlightTime = await getFlightTime(req.query.origin, req.query.destination)
+    try {
+        if (!req.query.origin || !req.query.destination || !req.query.datetime) {
+            return res.status(400).json({
+                success: false,
+                message: 'Missing required parameters: origin, destination, datetime.'
+            });
+        }
 
-    const inputAirCompanyRecomendation = generateInputForAirCompanyRecomendationModel(
-        req,
-        originData,
-        destinationData,
-        weatherDataOrigin,
-        weatherDataDestination,
-        dateDatails,
-        estimedFlightTime
-    );
+        const originData = await getLatLonByICAO(req.query.origin);
+        const destinationData = await getLatLonByICAO(req.query.destination);
 
-    const airCompanyRecomendation = await getAirCompanyRecomendation(inputAirCompanyRecomendation);
-    
-    const inputFlightAnalysis = {
-        ...inputAirCompanyRecomendation,
-        'Empresa Aérea': airCompanyRecomendation.air_company
-    };
-    
-    const flightAnalysis = await getFlightAnalysis(inputFlightAnalysis);
+        if (!originData || !destinationData) {
+            return res.status(404).json({
+                success: false,
+                message: 'Origin or destination airport not found.'
+            });
+        }
 
-    returnAnalysis = {
-        ...flightAnalysis,
-        'air_company': airCompanyRecomendation.air_company,
-        'normal_flight_time': estimedFlightTime
+        const dt = moment(req.query.datetime, 'DD/MM/YYYY HH:mm:ss').unix();
+
+        if (!dt) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid datetime format. Please use "DD/MM/YYYY HH:mm:ss".'
+            });
+        }
+
+        const [weatherDataOrigin, weatherDataDestination] = await Promise.all([
+            getWeatherData(originData.latitude, originData.longitude, dt, API_KEY),
+            getWeatherData(destinationData.latitude, destinationData.longitude, dt, API_KEY)
+        ]);
+
+        if (!weatherDataOrigin || !weatherDataDestination) {
+            return res.status(500).json({
+                success: false,
+                message: 'Failed to fetch weather data for one or both airports.'
+            });
+        }
+
+        const dateDetails = getDateDetails(dt);
+
+        const estimedFlightTime = await getFlightTime(req.query.origin, req.query.destination);
+
+        if (!estimedFlightTime) {
+            return res.status(500).json({
+                success: false,
+                message: 'Failed to fetch estimated flight time.'
+            });
+        }
+
+        const inputAirCompanyRecomendation = generateInputForAirCompanyRecomendationModel(
+            req,
+            originData,
+            destinationData,
+            weatherDataOrigin,
+            weatherDataDestination,
+            dateDetails,
+            estimedFlightTime
+        );
+
+        const airCompanyRecomendation = await getAirCompanyRecomendation(inputAirCompanyRecomendation);
+
+        if (!airCompanyRecomendation || !airCompanyRecomendation.air_company) {
+            return res.status(500).json({
+                success: false,
+                message: 'Failed to recommend an airline.'
+            });
+        }
+
+        const inputFlightAnalysis = {
+            ...inputAirCompanyRecomendation,
+            'Empresa Aérea': airCompanyRecomendation.air_company
+        };
+
+        const flightAnalysis = await getFlightAnalysis(inputFlightAnalysis);
+
+        if (!flightAnalysis) {
+            return res.status(500).json({
+                success: false,
+                message: 'Failed to perform flight analysis.'
+            });
+        }
+
+        const returnAnalysis = {
+            ...flightAnalysis,
+            'air_company': airCompanyRecomendation.air_company,
+            'normal_flight_time': estimedFlightTime
+        };
+
+        return res.json({
+            success: true,
+            message: "Flight analysis completed successfully.",
+            data: returnAnalysis
+        });
+
+    } catch (error) {
+        console.error("Error during flight analysis:", error);
+        return res.status(500).json({
+            success: false,
+            message: 'An unexpected error occurred during the flight analysis.'
+        });
     }
-    
-    console.log(returnAnalysis)
-
-
-    res.json({
-        "success": true,
-        "message": "Flight analysis completed successfully.",
-        "data": returnAnalysis
-    })
-})
-
-// Rota principal para predição
-app.post('/predict', (req, res) => {
-    console.log("Dados recebidos:", req.body);
-
-    // Converter os dados do request para uma string JSON
-    const input = JSON.stringify(req.body);
-
-    // Executar o script Python com `spawn`
-    const python = spawn('python', ['predict_models.py', input]);
-
-    let output = '';
-    let errorOutput = '';
-
-    // Coletar saída do script Python
-    python.stdout.on('data', (data) => {
-        output += data.toString();
-    });
-
-    // Coletar erros do script Python
-    python.stderr.on('data', (data) => {
-        errorOutput += data.toString();
-    });
-
-    // Quando o processo Python termina
-    python.on('close', (code) => {
-        console.log(`Processo Python finalizado com código: ${code}`);
-        if (code !== 0) {
-            console.error("Erro ao executar o script Python:", errorOutput);
-            res.status(500).send("Erro ao processar a predição.");
-            return;
-        }
-
-        try {
-            const result = JSON.parse(output);
-            res.json(result);
-        } catch (error) {
-            console.error("Erro ao processar a resposta do modelo:", error);
-            res.status(500).send("Erro ao processar a resposta do modelo.");
-        }
-    });
 });
 
 async function getAirCompanyRecomendation(input) {
@@ -252,15 +269,15 @@ async function getWeatherData(lat, lon, dt, apiKey) {
 }
 
 function getDateDetails(unixDate) {
-    const date = moment.unix(unixDate).toDate(); // Converter para formato de data
-    const hd = new Holidays('BR'); // Configura para o Brasil (substitua conforme necessário)
+    const date = moment.unix(unixDate).toDate();
+    const hd = new Holidays('BR');
 
     const holiday = hd.isHoliday(date);
     const isHoliday = holiday ? 1 : 0;
 
     const isWeekend = (date.getDay() === 0 || date.getDay() === 6) ? 1 : 0;
 
-    const dayOfWeek = moment(date).format('dddd'); // Ex.: 'Monday'
+    const dayOfWeek = moment(date).format('dddd');
 
     return {
         'Final de Semana': isWeekend,
@@ -277,7 +294,7 @@ async function getFlightTime(originCode, destinationCode) {
         );
 
         if (flight) {
-            return parseInt(flight['Tempo esperado de voo'], 10); // Retornar o tempo esperado de voo
+            return parseInt(flight['Tempo esperado de voo'], 10);
         } else {
             throw new Error('Voo não encontrado.');
         }
