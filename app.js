@@ -62,32 +62,48 @@ const getLatLonByICAO = (icaoCode) => {
 }
 
 app.get('/api/analysis', async (req, res) => {
-    console.log(req.query);
     const originData = getLatLonByICAO(req.query.origin);
     const destinationData = getLatLonByICAO(req.query.destination);
     const dt = moment(req.query.datetime, 'DD/MM/YYYY HH:mm:ss').unix();
-
     const [weatherDataOrigin, weatherDataDestination] = await Promise.all([
         getWeatherData(originData.latitude, originData.longitude, dt, API_KEY),
         getWeatherData(destinationData.latitude, destinationData.longitude, dt, API_KEY),
     ]);
-
     const dateDatails = getDateDetails(dt);
+    const estimedFlightTime = await getFlightTime(req.query.origin, req.query.destination)
 
-    const estimedFlightTime = getFlightTime(req.query.origin, req.query.destination);
+    const inputAirCompanyRecomendation = generateInputForAirCompanyRecomendationModel(
+        req,
+        originData,
+        destinationData,
+        weatherDataOrigin,
+        weatherDataDestination,
+        dateDatails,
+        estimedFlightTime
+    );
 
-    console.log(flightsData)
+    const airCompanyRecomendation = await getAirCompanyRecomendation(inputAirCompanyRecomendation);
+    
+    const inputFlightAnalysis = {
+        ...inputAirCompanyRecomendation,
+        'Empresa Aérea': airCompanyRecomendation.air_company
+    };
+    
+    const flightAnalysis = await getFlightAnalysis(inputFlightAnalysis);
 
-    console.log("Origem:", originData);
-    console.log("Destino:", destinationData);
-    console.log("Data e Hora:", dt);
-    // console.log(weatherDataOrigin)
-    // console.log(weatherDataDestination)
-    console.log(dateDatails)
-    console.log(estimedFlightTime)
+    returnAnalysis = {
+        ...flightAnalysis,
+        'air_company': airCompanyRecomendation.air_company,
+        'normal_flight_time': estimedFlightTime
+    }
+    
+    console.log(returnAnalysis)
+
 
     res.json({
-        "company": "Voeazul"
+        "success": true,
+        "message": "Flight analysis completed successfully.",
+        "data": returnAnalysis
     })
 })
 
@@ -125,7 +141,6 @@ app.post('/predict', (req, res) => {
 
         try {
             const result = JSON.parse(output);
-            console.log("Resultados do modelo:", result);
             res.json(result);
         } catch (error) {
             console.error("Erro ao processar a resposta do modelo:", error);
@@ -133,6 +148,78 @@ app.post('/predict', (req, res) => {
         }
     });
 });
+
+async function getAirCompanyRecomendation(input) {
+
+    input = JSON.stringify(input);
+
+    const python = spawn('python', ['air_company_recomendation.py', input]);
+
+    return new Promise((resolve, reject) => {
+        let output = '';
+        let errorOutput = '';
+
+        python.stdout.on('data', (data) => {
+            output += data.toString();
+        });
+
+        python.stderr.on('data', (data) => {
+            errorOutput += data.toString();
+        });
+
+        python.on('close', (code) => {
+            console.log(`Processo Python finalizado com código: ${code}`);
+            if (code !== 0) {
+                console.error("Erro ao executar o script Python:", errorOutput);
+                reject(new Error("Erro ao executar o script Python"));
+            }
+
+            try {
+                const result = JSON.parse(output);
+                resolve(result);
+            } catch (error) {
+                console.error("Erro ao processar a resposta do modelo:", error);
+                reject(new Error("Erro ao processar a resposta do modelo"));
+            }
+        });
+    });
+}
+
+async function getFlightAnalysis(input) {
+
+    input = JSON.stringify(input);
+
+    const python = spawn('python', ['flight_analysis.py', input]);
+
+    return new Promise((resolve, reject) => {
+        let output = '';
+        let errorOutput = '';
+
+        python.stdout.on('data', (data) => {
+            output += data.toString();
+        });
+
+        python.stderr.on('data', (data) => {
+            errorOutput += data.toString();
+        });
+
+        python.on('close', (code) => {
+            console.log(`Processo Python finalizado com código: ${code}`);
+            if (code !== 0) {
+                console.error("Erro ao executar o script Python:", errorOutput);
+                reject(new Error("Erro ao executar o script Python"));
+            }
+
+            try {
+                const result = JSON.parse(output);
+                resolve(result);
+            } catch (error) {
+                console.error("Erro ao processar a resposta do modelo:", error);
+                reject(new Error("Erro ao processar a resposta do modelo"));
+            }
+        });
+    });
+}
 
 app.get('/api/airports', async (req, res) => {
     try {
@@ -157,7 +244,6 @@ async function getWeatherData(lat, lon, dt, apiKey) {
                 units: 'metric'
             }
         });
-
         return response.data;
     } catch (error) {
         console.error('Erro ao obter dados de clima:', error.response?.data || error.message);
@@ -200,6 +286,32 @@ async function getFlightTime(originCode, destinationCode) {
         throw error;
     }
 }
+
+const generateInputForAirCompanyRecomendationModel = (req, originData, destinationData, weatherDataOrigin, weatherDataDestination, dateDatails, estimedFlightTime) => {
+    
+    const input = {
+        'Sigla ICAO Aeroporto Origem': req.query.origin,
+        'Sigla ICAO Aeroporto Destino': req.query.destination,
+        'Dia da Semana': dateDatails['Dia da Semana'],
+        'LATITUDE_ORIGEM': originData.latitude,
+        'LONGITUDE_ORIGEM': originData.longitude,
+        'LATITUDE_DESTINO': destinationData.latitude,
+        'LONGITUDE_DESTINO': destinationData.longitude,
+        'temp_origem': weatherDataOrigin.data[0].temp,
+        'temp_destino': weatherDataDestination.data[0].temp,
+        'pressure_origem': weatherDataOrigin.data[0].pressure,
+        'pressure_destino': weatherDataDestination.data[0].pressure,
+        'humidity_origem': weatherDataOrigin.data[0].humidity,
+        'humidity_destino': weatherDataDestination.data[0].humidity,
+        'clouds_origem': weatherDataOrigin.data[0].clouds,
+        'clouds_destino': weatherDataDestination.data[0].clouds,
+        'Tempo esperado de voo': estimedFlightTime,
+        'Final de Semana': dateDatails['Final de Semana'],
+        'Feriado': dateDatails['Feriado'],
+    };
+
+    return input;
+};
 
 app.listen(PORT, () => {
     console.log(`Servidor rodando na porta ${PORT}`);

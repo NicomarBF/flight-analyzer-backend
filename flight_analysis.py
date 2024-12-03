@@ -23,9 +23,9 @@ pred_delay = reg_model.predict(input_df)
 
 # Garantir que os valores são serializáveis
 output = {
-    "atraso": "Sim" if pred_class[0] == 1 else "Não",
-    "probabilidade_atraso": round(float(pred_prob) * 100, 2),  # Converter para float
-    "tempo_estimado_de_voo": round(float(pred_delay[0]), 2)    # Converter para float
+    "flight_delay": True if pred_class[0] == 1 else False,
+    "probability_of_outcome": round(float(pred_prob) * 100, 2),  # Converter para float
+    "estimated_flight_time": round(float(pred_delay[0]), 2)    # Converter para float
 }
 
 # Imprimir o resultado como JSON
