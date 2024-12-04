@@ -331,12 +331,15 @@ const generateInputForAirCompanyRecomendationModel = (req, originData, destinati
 };
 
 app.listen(PORT, () => {
+    initializeData();
     console.log(`Servidor rodando na porta ${PORT}`);
 });
 
-(async () => {
+const initializeData = async () => {
     await loadAirportsData();
     console.log("Airports data loaded!");
     await loadFlightsData();
     console.log("Flights data loaded!");
-})();
+};
+
+module.exports = { app, initializeData };
