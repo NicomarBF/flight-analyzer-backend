@@ -1,4 +1,4 @@
-const { getLatLonByICAO, getDateDetails, getFlightTime, generateInputForAirCompanyRecomendationModel } = require('../utils/flightUtils'); // Importar funções utilitárias
+const { getLatLonByICAO, getDateDetails, getFlightTime, generateInputForAirCompanyRecomendationModel } = require('../utils/flightUtils');
 const { getWeatherData } = require('../services/weatherDataService');
 const {  getAirCompanyRecomendation, getFlightAnalysis } = require('../services/aiService');
 require('dotenv').config();

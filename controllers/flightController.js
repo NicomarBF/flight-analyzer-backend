@@ -17,10 +17,16 @@ exports.analyzeFlight = async (req, res) => {
       data: analysisResult,
     });
   } catch (error) {
-    console.error('Error in analyzeFlight controller:', error);
-    res.status(500).json({
-      success: false,
-      message: 'An unexpected error occurred during the flight analysis.',
-    });
+    if(error == "Error: Origin or destination airport not found."){
+      res.status(404).json({
+        success: false,
+        message: 'Origin or destination airport not found.',
+      });
+    }else{
+      res.status(500).json({
+        success: false,
+        message: 'An unexpected error occurred during the flight analysis.',
+      });
+    }
   }
 };

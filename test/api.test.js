@@ -1,19 +1,22 @@
 const request = require('supertest');
-const { app, initializeData } = require('../app');
-const path = require('path');
+const app = require('../app');
+const { initializeData } = require('../loaders/dataLoaders');
+const { getWeatherData } = require('../services/weatherDataService');
+const { getFlightTime, getLatLonByICAO, getDateDetails } = require('../utils/flightUtils');
 
-jest.spyOn(console, 'log').mockImplementation(() => {});
 jest.spyOn(console, 'error').mockImplementation(() => {});
+
+jest.spyOn(console, 'log').mockImplementation((message) => {
+    process.stdout.write(message + '\n');
+});
 
 beforeAll(async () => {
     await initializeData();
 });
 
-jest.mock('../app', () => ({
-    ...jest.requireActual('../app'),
-    // getLatLonByICAO: jest.fn().mockReturnValue({ latitude: -23.435556, longitude: -46.473056 }),
-    getWeatherData: jest.fn().mockResolvedValue({ temp: 25, pressure: 1013, humidity: 70, clouds: 20 }),
-    // getFlightTime: jest.fn().mockResolvedValue(60)
+jest.mock('../services/weatherDataService', () => ({
+    ...jest.requireActual('../services/weatherDataService'),
+    getWeatherData: jest.fn().mockResolvedValue({ data: [{ temp: 25, pressure: 1013, humidity: 70, clouds: 20 }]}),
 }));
 
 describe('GET /api/analysis', () => {
@@ -43,12 +46,16 @@ describe('GET /api/analysis', () => {
         const res = await request(app).get('/api/analysis').query({
             origin: 'SBGR',
             destination: 'SBGL',
-            datetime: '05/12/2024 00:00:00'
+            datetime: '05/12/2024 12:00:00'
         });
-        console.log(res.body);
         expect(res.statusCode).toBe(200);
         expect(res.body).toHaveProperty('success', true);
         expect(res.body).toHaveProperty('data');
+        expect(res.body.data).toHaveProperty('flight_delay');
+        expect(res.body.data).toHaveProperty('probability_of_outcome');
+        expect(res.body.data).toHaveProperty('estimated_flight_time');
+        expect(res.body.data).toHaveProperty('air_company');
+        expect(res.body.data).toHaveProperty('normal_flight_time');
     });
 });
 

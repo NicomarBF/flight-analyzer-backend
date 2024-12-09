@@ -1,8 +1,7 @@
 const { getAirportsData } = require('../loaders/dataLoaders');
 
 exports.getAirports = async (req, res) => {
-    const airportsData = getAirportsData(); // Use o getter aqui
-    console.log(airportsData)
+    const airportsData = getAirportsData();
     try {
         if (!airportsData || airportsData.length === 0) {
             return res.status(500).send('Os aeródromos não foram carregados ainda.');

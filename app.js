@@ -1,9 +1,9 @@
 const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
-const flightRoutes = require('./routes/flightRoutes'); // Rotas específicas
-const airportsRoutes = require('./routes/airportsRoutes'); // Rotas específicas
-require('dotenv').config(); // Carrega variáveis de ambiente
+const flightRoutes = require('./routes/flightRoutes');
+const airportsRoutes = require('./routes/airportsRoutes');
+require('dotenv').config();
 const { initializeData, airportsData, flightsData } = require('./loaders/dataLoaders');
 
 const app = express();
@@ -18,7 +18,7 @@ const dataReady = initializeData();
 
 app.use(async (req, res, next) => {
   try {
-    await dataReady; // Aguarde até que os dados sejam carregados
+    await dataReady;
     next();
   } catch (error) {
     console.error('Data initialization failed:', error);

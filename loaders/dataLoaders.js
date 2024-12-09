@@ -4,7 +4,6 @@ const csvtojson = require('csvtojson');
 let airportsData = [];
 let flightsData = [];
 
-// Função para carregar dados dos aeroportos
 const loadAirportsData = async () => {
   const csvFilePath = path.join(__dirname, '../data/aerodromos.csv');
   try {
@@ -16,7 +15,6 @@ const loadAirportsData = async () => {
   }
 };
 
-// Função para carregar dados dos voos
 const loadFlightsData = async () => {
   const csvFilePath = path.join(__dirname, '../data/registros_temp_voos.csv');
   try {
@@ -31,7 +29,6 @@ const loadFlightsData = async () => {
 const getAirportsData = () => airportsData;
 const getFlightsData = () => flightsData;
 
-// Função para inicializar os dados
 const initializeData = async () => {
   try {
     await loadAirportsData();
@@ -42,7 +39,6 @@ const initializeData = async () => {
   }
 };
 
-// Exportar os dados e funções para serem usados em outras partes do projeto
 module.exports = {
   initializeData,
   getAirportsData,

@@ -31,10 +31,6 @@ exports.getLatLonByICAO = (icaoCode) => {
     }
 };
 
-exports.getWeatherData = (latitude, longitude, dt, apiKey) => {
-    
-}
-
 exports.getDateDetails = (unixDate) => {
     const date = moment.unix(unixDate).toDate();
     const hd = new Holidays('BR');
