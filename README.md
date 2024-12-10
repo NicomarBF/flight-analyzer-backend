@@ -61,6 +61,36 @@ flight-analyzer-backend/
 
 ---
 
+### 📝⚙️ Requisitos Funcionais e Não Funcionais
+
+#### **Requisitos Funcionais**
+
+| **ID** | **Descrição**                                                                                   |
+|--------|-------------------------------------------------------------------------------------------------|
+| RF01   | Permitir a análise preditiva de voos com base em informações como aeroporto de origem, destino e data/hora. |
+| RF02   | Retornar probabilidade de atraso, tempo estimado de voo e recomendação de companhia aérea.      |
+| RF03   | Buscar dados meteorológicos da API OpenWeather com base nas coordenadas dos aeroportos.         |
+| RF04   | Carregar e utilizar modelos treinados para predição de atraso (classificação) e estimativa de tempo de voo (regressão). |
+| RF05   | Carregar arquivos CSV contendo informações de aeródromos e registros de voos para alimentar as análises. |
+| RF06   | Retornar os dados processados no formato JSON para o consumo direto pelo frontend.              |
+| RF07   | Fornecer mensagens de erro apropriadas para casos como dados ausentes, erros de carregamento ou falhas na API externa. |
+
+
+#### **Requisitos Não Funcionais**
+
+| **ID** | **Descrição**                                                                                   |
+|--------|-------------------------------------------------------------------------------------------------|
+| RNF01  | O sistema deve responder às requisições em menos de 2 segundos, considerando a busca em APIs externas. |
+| RNF02  | O backend deve ser modular, permitindo a adição de novos serviços ou modelos de IA sem grandes modificações. |
+| RNF03  | O código deve ser organizado em camadas (controllers, services, utils), com lógica bem encapsulada. |
+| RNF04  | Todo o sistema deve ser coberto por testes unitários e de integração utilizando Jest.            |
+| RNF05  | As variáveis de ambiente sensíveis, como a chave da API de dados climáticos, devem ser configuradas em um arquivo `.env`. |
+| RNF06  | O projeto deve conter documentação detalhada no `README.md`, incluindo instruções de configuração, dependências e exemplos de uso. |
+| RNF07  | Garantir que o backend seja executado em ambientes Node.js 16+ com suporte para integração Python 3.9+. |
+| RNF08  | Consumir dados abertos da ANAC e integrar-se com APIs externas (OpenWeather), com logs detalhados de requisições para debugging. |
+
+---
+
 ## 📊 Modelagem dos Dados (`/data`)
 OBS: A aplicação não possui(Por não necessidade) uma estrutura de armazenamento de dados em SGBD(Software de Gerenciamento de Banco de Dados), os principais dados consumidos pelo frontend são fixos/não variáveis e por isso são aramzenados e consumidos de arquivos '.csv'
 ### Dados dos Aeroportos (`aerodromos.csv`)
