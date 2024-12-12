@@ -1,6 +1,7 @@
 const { getLatLonByICAO, getDateDetails, getFlightTime, generateInputForAirCompanyRecomendationModel } = require('../utils/flightUtils');
 const { getWeatherData } = require('../services/weatherDataService');
 const {  getAirCompanyRecomendation, getFlightAnalysis } = require('../services/aiService');
+const moment = require('moment');
 require('dotenv').config();
 
 exports.getFlightAnalysis = async (query) => {
@@ -14,7 +15,14 @@ exports.getFlightAnalysis = async (query) => {
       throw new Error('Origin or destination airport not found.');
     }
 
-    const dt = new Date(datetime).getTime() / 1000;
+    const dt = moment(query.datetime, 'DD/MM/YYYY HH:mm:ss').unix();
+
+    if (!dt) {
+        return res.status(400).json({
+            success: false,
+            message: 'Invalid datetime format. Please use "DD/MM/YYYY HH:mm:ss".'
+        });
+    }
 
     const [weatherDataOrigin, weatherDataDestination] = await Promise.all([
       getWeatherData(originData.latitude, originData.longitude, dt, process.env.WEATHER_DATA_API_KEY),
